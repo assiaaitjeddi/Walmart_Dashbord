@@ -19,27 +19,32 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .sidebar .sidebar-content {
-        background-image: linear-gradient(to bottom, #f2f2f2, #ffffff);
+    table {
+        border-collapse: collapse;
+        width: 100%;
     }
-    .sidebar .sidebar-content .block-container {
-        color: #1F618D;
+    th, td {
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
     }
-    .sidebar .sidebar-content .block-container .block-title {
-        color: #1F618D;
+    th {
+        background-color: #f2f2f2;
     }
-    .sidebar .sidebar-content .block-container .stSelectbox {
-        color: #1F618D;
-        background-color: #ffffff;
-    }
-    .sidebar .sidebar-content .stButton {
-        color: #ffffff;
-        background-color: #1F618D;
+    .total-sales {
+        border: 2px solid #1F618D;
+        border-radius: 5px;
+        padding: 10px;
+        background-color: #f2f2f2;
+        color: black;
+        width: 300px;
+        text-align: center;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
+
 
 st.sidebar.title("Walmart Sales Dashboard")  # Add title to the sidebar
 file_path = st.sidebar.file_uploader("Choose a CSV file")
@@ -93,27 +98,28 @@ if file_path is not None:
     # Sélectionner uniquement les colonnes 'Store' et 'Weekly_Sales'
     top_5_df = top_5_stores[['Store', 'Weekly_Sales']]
 
-
     #**********************************
     top_5_stores_with_size = filtered_data.loc[filtered_data['Store'].isin(top_5_stores['Store']), ['Store', 'Size','Type']].drop_duplicates()
     
-    
-    st.markdown(f'<div style="border: 2px solid #1F618D; border-radius: 5px; padding: 10px; background-color: #f2f2f2; color: black; width: 300px;">\
-                     <span style="color: #1F618D; font-size: 20px;">💰</span>\
-                     <span style="font-size: 20px;">Total Sales:</span>\
-                     <span style="font-size: 24px; font-weight: bold;">{total_sales_str}</span>\
+    # Affichage des informations sur les ventes totales
+    st.markdown(f'<div class="total-sales-container">\
+                     <div class="total-sales" style="align:center;">\
+                         <span style="color: #1F618D; font-size: 40px;">🛒</span>\
+                         <span style="font-size: 20px;">Total Sales:</span>\
+                         <span style="font-size: 24px; font-weight: bold;">{total_sales_str}</span>\
+                     </div>\
                  </div>', unsafe_allow_html=True)
 
-
+    # Affichage des top 5 magasins avec leurs ventes
     c9, C_ = st.columns(2)
-    with c9 :
+    with c9:
         st.write("### Top 5 Sales Stores")
         st.write(top_5_df)
-    with C_ :
+    with C_:
         st.write("### Top Stores Size")
         st.write(top_5_stores_with_size)
 
-
+    # Création des graphiques
     # Create Plotly figure for donut chart (sales by type)
     sales_by_type = filtered_data.groupby('Type')['Weekly_Sales'].sum().reset_index()
     fig_sales_by_type = go.Figure(go.Pie(labels=sales_by_type['Type'], values=sales_by_type['Weekly_Sales'],
@@ -127,8 +133,31 @@ if file_path is not None:
                                                 hole=.3, marker_colors=['#1F618D ', '#228FD4']))
         fig_sales_by_holiday.update_layout(title='Predicted Sales by Holiday')
 
-    # Display the donut charts using st.columns(2)
-    col1, col2 = st.columns(2)
+    # Create Plotly figure for sales, ROP, and safety stock
+    weekly_data = filtered_data.groupby('Week').agg({'Weekly_Sales': 'mean'}).reset_index()
+    fig_sales_rop_stock = go.Figure()
+    fig_sales_rop_stock.add_trace(go.Scatter(x=weekly_data['Week'], y=weekly_data['Weekly_Sales'],
+                                              mode='lines', name='Average Predicted Sales'))
+    fig_sales_rop_stock.update_layout(title='Average Predicted Sales per Week',
+                                       xaxis_title='Week', yaxis_title='Value')
+
+    # Create Plotly histogram for sales by store
+    sales_by_store = filtered_data.groupby('Store')['Weekly_Sales'].sum().reset_index()
+    fig_sales_by_store = go.Figure(go.Bar(x=sales_by_store['Store'], y=sales_by_store['Weekly_Sales']))
+    fig_sales_by_store.update_layout(title='Total Sales Predicted by Store',
+                                      xaxis_title='Store', yaxis_title='Total Sales')
+
+    # Create Plotly histogram for total sales by month
+    monthly_sales = filtered_data.groupby('Month')['Weekly_Sales'].sum().reset_index()
+    fig_sales_by_month = go.Figure(go.Bar(x=monthly_sales['Month'], y=monthly_sales['Weekly_Sales']))
+    fig_sales_by_month.update_layout(
+        title='Total Sales Predicted by Month',
+        xaxis_title='Month',
+        yaxis_title='Total Sales'
+    )
+
+    # Affichage des graphiques dans des colonnes
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         if not filtered_data.empty:
@@ -138,68 +167,20 @@ if file_path is not None:
         if not filtered_data.empty:
             st.plotly_chart(fig_sales_by_holiday, use_container_width=True)
 
-    # Group data by week and calculate average sales, ROP, and safety stock
-    weekly_data = filtered_data.groupby('Week').agg({'Weekly_Sales': 'mean'}).reset_index()
+    with col3:
+        if not filtered_data.empty:
+            st.plotly_chart(fig_sales_rop_stock, use_container_width=True)
 
-    # Create Plotly figure for sales, ROP, and safety stock
-    fig_sales_rop_stock = go.Figure()
 
-    # Add trace for average sales
-    fig_sales_rop_stock.add_trace(go.Scatter(x=weekly_data['Week'], y=weekly_data['Weekly_Sales'],
-                                              mode='lines', name='Average Predicted Sales'))
-    # Add annotations for holidays
-    holidays = filtered_data[filtered_data['IsHoliday'] == 1]['Week'].unique()
-    for holiday in holidays:
-        fig_sales_rop_stock.add_annotation(x=holiday, y=weekly_data.loc[weekly_data['Week'] == holiday, 'Weekly_Sales'].values[0],
-                                           text="Holiday", showarrow=True, arrowhead=1)
-
-    # Update layout for sales, ROP, and safety stock
-    fig_sales_rop_stock.update_layout(title='Average Predicted Sales per Week',
-                                       xaxis_title='Week', yaxis_title='Value')
-
-    # Display the plot for sales, ROP, and safety stock
-    st.plotly_chart(fig_sales_rop_stock)
-
-    # Group data by store and calculate total sales for each store
-    sales_by_store = filtered_data.groupby('Store')['Weekly_Sales'].sum().reset_index()
-
-    # Create Plotly histogram for sales by store
-    fig_sales_by_store = go.Figure(go.Bar(x=sales_by_store['Store'], y=sales_by_store['Weekly_Sales']))
-
-    # Update layout for sales by store
-    fig_sales_by_store.update_layout(title='Total Sales Predicted by Store',
-                                      xaxis_title='Store', yaxis_title='Total Sales')
-
-    # Display the histogram for sales by store
-    st.plotly_chart(fig_sales_by_store)
-
-    # Group data by month and calculate total sales for each month
-    monthly_sales = filtered_data.groupby('Month')['Weekly_Sales'].sum().reset_index()
-
-    # Create Plotly histogram for total sales by month
-    fig_sales_by_month = go.Figure(go.Bar(x=monthly_sales['Month'], y=monthly_sales['Weekly_Sales']))
-
-    # Add holidays as annotations
-    holidays = filtered_data[filtered_data['IsHoliday'] == 1].groupby('Month')['Weekly_Sales'].sum().reset_index()
-    for i, row in holidays.iterrows():
-        fig_sales_by_month.add_annotation(x=row['Month'], y=row['Weekly_Sales'],
-                                          text="Holiday",
-                                          showarrow=True,
-                                          arrowhead=1,
-                                          ax=0,
-                                          ay=-40)
-
-    # Update layout for total sales by month
-    fig_sales_by_month.update_layout(
-        title='Total Sales Predicted by Month',
-        xaxis_title='Month',
-        yaxis_title='Total Sales'
-    )
-
-    # Display the histogram for total sales by month
-    st.plotly_chart(fig_sales_by_month)
+    c2, c3 = st.columns(2)
+    with c2:
+        if not filtered_data.empty:
+            st.plotly_chart(fig_sales_by_store, use_container_width=True)
+    with c3:
+        if not filtered_data.empty:
+            st.plotly_chart(fig_sales_by_month, use_container_width=True)
 
 
     # Afficher le DataFrame filtré
-    st.write("Filtered Data:")
+    st.write("## Dataset ")
     st.write(filtered_data)
