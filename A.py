@@ -95,7 +95,7 @@ if file_path is not None:
 
 
     #**********************************
-    top_5_stores_with_size = filtered_data.loc[filtered_data['Store'].isin(top_5_stores['Store']), ['Store', 'Size']].drop_duplicates()
+    top_5_stores_with_size = filtered_data.loc[filtered_data['Store'].isin(top_5_stores['Store']), ['Store', 'Size','Type']].drop_duplicates()
     
     
     st.markdown(f'<div style="border: 2px solid #1F618D; border-radius: 5px; padding: 10px; background-color: #f2f2f2; color: black; width: 300px;">\
