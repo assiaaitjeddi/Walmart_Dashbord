@@ -1,5 +1,3 @@
-
-
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -84,12 +82,35 @@ if file_path is not None:
     # Format total sales
     total_sales_str = format(total_sales, ",.0f")
 
-    # Display total sales with an icon in a bordered box
+    # Group data by store and calculate total sales for each store
+    sales_by_store = filtered_data.groupby('Store')['Weekly_Sales'].sum().reset_index()
+
+    # Sort stores by total sales in descending order
+    sales_by_store_sorted = sales_by_store.sort_values(by='Weekly_Sales', ascending=False)
+
+    # Select top 5 stores
+    top_5_stores = sales_by_store_sorted.head(5)
+    # Sélectionner uniquement les colonnes 'Store' et 'Weekly_Sales'
+    top_5_df = top_5_stores[['Store', 'Weekly_Sales']]
+
+
+    #**********************************
+    top_5_stores_with_size = filtered_data.loc[filtered_data['Store'].isin(top_5_stores['Store']), ['Store', 'Size']].drop_duplicates()
+    
+    
     st.markdown(f'<div style="border: 2px solid #1F618D; border-radius: 5px; padding: 10px; background-color: #f2f2f2; color: black; width: 300px;">\
-                         <span style="color: #1F618D; font-size: 20px; margin-right: 10px;">💰</span>\
-                         <span style="font-size: 20px;">Total Sales:</span>\
-                         <span style="font-size: 24px; font-weight: bold; margin-left: 10px;">{total_sales_str} </span>\
-                     </div>', unsafe_allow_html=True)
+                     <span style="color: #1F618D; font-size: 20px;">💰</span>\
+                     <span style="font-size: 20px;">Total Sales:</span>\
+                     <span style="font-size: 24px; font-weight: bold;">{total_sales_str}</span>\
+                 </div>', unsafe_allow_html=True)
+
+
+    c9, C_ = st.columns(2)
+    with c9 :
+        st.write(top_5_df)
+    with C_ :
+        st.write(top_5_stores_with_size)
+
 
     # Create Plotly figure for donut chart (sales by type)
     sales_by_type = filtered_data.groupby('Type')['Weekly_Sales'].sum().reset_index()
@@ -116,7 +137,7 @@ if file_path is not None:
             st.plotly_chart(fig_sales_by_holiday, use_container_width=True)
 
     # Group data by week and calculate average sales, ROP, and safety stock
-    weekly_data = filtered_data.groupby('Week').agg({'Weekly_Sales': 'mean', 'ROP': 'mean', 'Safety_Stock': 'mean'}).reset_index()
+    weekly_data = filtered_data.groupby('Week').agg({'Weekly_Sales': 'mean'}).reset_index()
 
     # Create Plotly figure for sales, ROP, and safety stock
     fig_sales_rop_stock = go.Figure()
@@ -137,7 +158,6 @@ if file_path is not None:
     # Display the plot for sales, ROP, and safety stock
     st.plotly_chart(fig_sales_rop_stock)
 
-    # **************************#
     # Group data by store and calculate total sales for each store
     sales_by_store = filtered_data.groupby('Store')['Weekly_Sales'].sum().reset_index()
 
@@ -151,32 +171,33 @@ if file_path is not None:
     # Display the histogram for sales by store
     st.plotly_chart(fig_sales_by_store)
 
+    # Group data by month and calculate total sales for each month
+    monthly_sales = filtered_data.groupby('Month')['Weekly_Sales'].sum().reset_index()
 
-#*******************
-import numpy as np
+    # Create Plotly histogram for total sales by month
+    fig_sales_by_month = go.Figure(go.Bar(x=monthly_sales['Month'], y=monthly_sales['Weekly_Sales']))
 
-# Group data by month and calculate total sales for each month
-monthly_sales = filtered_data.groupby('Month')['Weekly_Sales'].sum().reset_index()
+    # Add holidays as annotations
+    holidays = filtered_data[filtered_data['IsHoliday'] == 1].groupby('Month')['Weekly_Sales'].sum().reset_index()
+    for i, row in holidays.iterrows():
+        fig_sales_by_month.add_annotation(x=row['Month'], y=row['Weekly_Sales'],
+                                          text="Holiday",
+                                          showarrow=True,
+                                          arrowhead=1,
+                                          ax=0,
+                                          ay=-40)
 
-# Create Plotly histogram for total sales by month
-fig_sales_by_month = go.Figure(go.Bar(x=monthly_sales['Month'], y=monthly_sales['Weekly_Sales']))
+    # Update layout for total sales by month
+    fig_sales_by_month.update_layout(
+        title='Total Sales Predicted by Month',
+        xaxis_title='Month',
+        yaxis_title='Total Sales'
+    )
 
-# Add holidays as annotations
-holidays = filtered_data[filtered_data['IsHoliday'] == 1].groupby('Month')['Weekly_Sales'].sum().reset_index()
-for i, row in holidays.iterrows():
-    fig_sales_by_month.add_annotation(x=row['Month'], y=row['Weekly_Sales'],
-                                      text="Holiday",
-                                      showarrow=True,
-                                      arrowhead=1,
-                                      ax=0,
-                                      ay=-40)
+    # Display the histogram for total sales by month
+    st.plotly_chart(fig_sales_by_month)
 
-# Update layout for total sales by month
-fig_sales_by_month.update_layout(
-    title='Total Sales Predicted by Month',
-    xaxis_title='Month',
-    yaxis_title='Total Sales'
-)
 
-# Display the histogram for total sales by month
-st.plotly_chart(fig_sales_by_month)
+    # Afficher le DataFrame filtré
+    st.write("Filtered Data:")
+    st.write(filtered_data)
