@@ -107,8 +107,10 @@ if file_path is not None:
 
     c9, C_ = st.columns(2)
     with c9 :
+        st.write("### Top 5 Sales Stores")
         st.write(top_5_df)
     with C_ :
+        st.write("### Top Stores Size")
         st.write(top_5_stores_with_size)
 
 
