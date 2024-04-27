@@ -58,11 +58,9 @@ if file_path is not None:
 
     if selected_option == "Dataset":
         # Display dataset
-        st.write("## Walmart Sales Dataset")
         st.write(filtered_data)
 
     elif selected_option == "Dashboard":
-        st.write("## Walmart Sales Dashb")
         total_sales = calculate_total_sales(filtered_data)
         # Format total sales
         total_sales_str = format(total_sales, ",.0f")
