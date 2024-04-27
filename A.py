@@ -35,6 +35,9 @@ if file_path is not None:
         return total_sales
     
     st.sidebar.title("Options")
+
+    selected_option = st.sidebar.radio("Select an option", ["Dataset", "Dashboard"])
+    
     store_list = ['ALL'] + sorted(data['Store'].unique())
     selected_store = st.sidebar.selectbox("Select Store", store_list)
 
@@ -53,9 +56,7 @@ if file_path is not None:
     if selected_week != 'ALL':
         filtered_data = filtered_data[filtered_data['Week'] == selected_week]
 
-    # Sidebar options
-    st.sidebar.title("Options")
-    selected_option = st.sidebar.radio("Select an option", ["Dataset", "Dashboard"])
+    
 
     if selected_option == "Dataset":
         # Display dataset
